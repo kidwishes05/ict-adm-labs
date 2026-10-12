@@ -1,0 +1,198 @@
+# --- Общие части сборщиков (compose игнорирует ключи x-*, это просто шаблоны) ---
+x-picker: &picker
+  build: ./picker-service
+  image: lab3/picker-service
+  depends_on:
+    kafka-init:
+      condition: service_completed_successfully
+  restart: unless-stopped
+ 
+x-picker-env: &picker-env
+  KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  KAFKA_TOPIC: orders
+  KAFKA_GROUP_ID: pickers          # одна группа → партиции делятся между сборщиками
+  PROCESS_SECONDS: 2
+  AUTO_OFFSET_RESET: earliest      # нет валидного коммита → читать с начала, а не терять
+ 
+services:
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9094:9094"            # доступ к брокеру с хоста (для отладки)
+    environment:
+      # --- KRaft: кто я и где кворум ---
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      CLUSTER_ID: "q1Sh-9_ISia_zwGINzRvyQ"
+ 
+      # --- Слушатели: на каких портах и для кого ---
+      KAFKA_LISTENERS: INTERNAL://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+ 
+      # --- Один брокер → внутренние топики с репликацией 1 ---
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+ 
+      # --- Поведение ---
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_OFFSETS_RETENTION_MINUTES: 10080   # 7 дней помнить offset'ы пустой группы
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      # "Готов" = брокер отвечает на запросы по API, а не просто процесс запущен
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 15s
+      retries: 10
+      start_period: 20s
+ 
+  # One-shot: приводит топик к описанному здесь состоянию (reconcile) и завершается
+  kafka-init:
+    image: apache/kafka:3.9.1
+    container_name: kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      BOOTSTRAP: kafka:9092
+      TOPIC_NAME: orders
+      TOPIC_PARTITIONS: 3                 # уменьшить нельзя — только новый топик + миграция
+      TOPIC_RETENTION_MS: 172800000       # 2 дня — заказы дольше не нужны
+      TOPIC_SEGMENT_MS: 3600000           # сегмент закрывается раз в час
+    entrypoint: ["/bin/bash", "-c"]
+    command:
+      - |
+        set -e
+        K=/opt/kafka/bin
+        echo "→ желаемое состояние: $$TOPIC_NAME, partitions=$$TOPIC_PARTITIONS, retention.ms=$$TOPIC_RETENTION_MS"
+ 
+        # 1. Топика нет — создать сразу с нужными параметрами
+        $$K/kafka-topics.sh --bootstrap-server $$BOOTSTRAP \
+          --create --if-not-exists --topic $$TOPIC_NAME \
+          --partitions $$TOPIC_PARTITIONS --replication-factor 1
+ 
+        # 2. Топик есть — сравнить число партиций и привести к желаемому
+        CURRENT=$$($$K/kafka-topics.sh --bootstrap-server $$BOOTSTRAP --describe --topic $$TOPIC_NAME \
+          | sed -n 's/.*PartitionCount: *\([0-9]*\).*/\1/p')
+        echo "→ партиций сейчас: $$CURRENT, нужно: $$TOPIC_PARTITIONS"
+        if [ "$$TOPIC_PARTITIONS" -ne "$$CURRENT" ]; then
+          echo "→ меняю число партиций: $$CURRENT → $$TOPIC_PARTITIONS"
+          $$K/kafka-topics.sh --bootstrap-server $$BOOTSTRAP \
+            --alter --topic $$TOPIC_NAME --partitions $$TOPIC_PARTITIONS
+        fi
+ 
+        # 3. Конфиги топика — безопасно выставлять на каждом запуске
+        $$K/kafka-configs.sh --bootstrap-server $$BOOTSTRAP \
+          --alter --entity-type topics --entity-name $$TOPIC_NAME \
+          --add-config retention.ms=$$TOPIC_RETENTION_MS,segment.ms=$$TOPIC_SEGMENT_MS
+ 
+        echo "→ фактическое состояние:"
+        $$K/kafka-topics.sh --bootstrap-server $$BOOTSTRAP --describe --topic $$TOPIC_NAME
+ 
+  user-service:
+    build: ./user-service
+    image: lab3/user-service
+    container_name: user-service
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      KAFKA_TOPIC: orders
+      INSTANCE_NAME: user-1
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+ 
+  picker-1:
+    <<: *picker
+    container_name: picker-1
+    environment:
+      <<: *picker-env
+      INSTANCE_NAME: picker-1
+    ports:
+      - "8001:8001"
+ 
+  picker-2:
+    <<: *picker
+    container_name: picker-2
+    environment:
+      <<: *picker-env
+      INSTANCE_NAME: picker-2
+    ports:
+      - "8002:8001"            # снаружи 8002, внутри контейнера тот же 8001
+ 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: lab3-local            # имя кластера в интерфейсе
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    ports:
+      - "127.0.0.1:8080:8080"  # только с этого компьютера: у UI нет логина
+    restart: unless-stopped
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.9.0
+    container_name: kafka-exporter
+    command: ["--kafka.server=kafka:9092"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:9308:9308"  # сырые метрики: http://localhost:9308/metrics
+    restart: unless-stopped
+ 
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+ 
+  node-exporter:
+    image: prom/node-exporter:v1.12.1
+    container_name: node-exporter
+    command: ["--path.rootfs=/host"]
+    pid: host                  # видеть процессы хоста, а не только свои
+    volumes:
+      - /:/host:ro,rslave      # корень хоста только для чтения: диск, где лежат volume'ы Docker
+    restart: unless-stopped
+ 
+  grafana:
+    image: grafana/grafana:13.2.3
+    container_name: grafana
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: lab3-admin       # локальный стенд; в проде — секрет, не в git
+      GF_AUTH_ANONYMOUS_ENABLED: "true"            # смотреть дашборд без логина…
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer           # …но только смотреть
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/kafka-orders.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+
+volumes:
+  kafka-data:
+  prometheus-data:

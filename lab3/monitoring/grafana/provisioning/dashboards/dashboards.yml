@@ -1,0 +1,10 @@
+# Откуда Grafana берёт дашборды — JSON-файлы из папки
+apiVersion: 1
+providers:
+  - name: lab3
+    folder: Lab3
+    type: file
+    disableDeletion: true        # из UI не удалить: источник правды — файл
+    allowUiUpdates: false        # правки в UI не сохраняются поверх файла
+    options:
+      path: /var/lib/grafana/dashboards

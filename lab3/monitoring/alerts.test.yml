@@ -1,0 +1,69 @@
+rule_files:
+  - alerts.yml
+evaluation_interval: 10s
+tests:
+  # Сборщики упали, лаг 30 → через 2 мин critical
+  - interval: 10s
+    input_series:
+      - series: 'kafka_consumergroup_members{consumergroup="pickers"}'
+        values: '0x30'
+      - series: 'kafka_consumergroup_lag_sum{consumergroup="pickers",topic="orders"}'
+        values: '30x30'
+      - series: 'kafka_topic_partition_current_offset{topic="orders",partition="0"}'
+        values: '0+1x30'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/"}'
+        values: '67x30'
+      - series: 'node_filesystem_size_bytes{mountpoint="/"}'
+        values: '100x30'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: PickersDownWithBacklog
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: PickersDownWithBacklog
+        exp_alerts:
+          - exp_labels: {severity: critical}
+            exp_annotations:
+              summary: "Заказы не собираются: в группе pickers нет ни одного сборщика"
+              description: "Сборщиков 0, ждут сборки 30 заказов. Проверить контейнеры picker-*: упали, crash-loop или не стартовали после деплоя."
+      - eval_time: 3m
+        alertname: OrdersStoppedArriving
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: KafkaDiskFillingUp
+        exp_alerts: []
+  # Сборщики живы, лаг 30 → не алертим; заказы не идут 15 мин → warning
+  - interval: 1m
+    input_series:
+      - series: 'kafka_consumergroup_members{consumergroup="pickers"}'
+        values: '2x20'
+      - series: 'kafka_consumergroup_lag_sum{consumergroup="pickers",topic="orders"}'
+        values: '30x20'
+      - series: 'kafka_topic_partition_current_offset{topic="orders",partition="0"}'
+        values: '100x20'
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PickersDownWithBacklog
+        exp_alerts: []
+      - eval_time: 16m
+        alertname: OrdersStoppedArriving
+        exp_alerts:
+          - exp_labels: {severity: warning}
+            exp_annotations:
+              summary: "В топик orders 10 минут не пришло ни одного заказа"
+              description: "Продюсер молчит: проверить user-service и upstream. «or vector(0)» срабатывает и тогда, когда метрик нет вообще — проверить up{job=\"kafka\"} (kafka-exporter)."
+  # Диск: 12% свободно → warning через 10 мин
+  - interval: 1m
+    input_series:
+      - series: 'node_filesystem_avail_bytes{mountpoint="/"}'
+        values: '12x20'
+      - series: 'node_filesystem_size_bytes{mountpoint="/"}'
+        values: '100x20'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: KafkaDiskFillingUp
+        exp_alerts:
+          - exp_labels: {severity: warning, mountpoint: "/"}
+            exp_annotations:
+              summary: "Диск с данными Kafka заканчивается"
+              description: "Свободно меньше 15% или при текущем темпе место кончится в ближайшие 4 часа. Варианты: расширить том, снизить retention.ms, проверить, кто пишет на диск."
