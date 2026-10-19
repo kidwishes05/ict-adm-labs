@@ -1,0 +1,14 @@
+global:
+  scrape_interval: 15s       # как часто опрашивать цели
+  evaluation_interval: 15s   # как часто пересчитывать правила алертов (понадобится позже)
+
+scrape_configs:
+  # Метрики Elasticsearch через exporter
+  - job_name: elasticsearch
+    static_configs:
+      - targets: ["es-exporter:9114"]
+
+  # Сам Prometheus: полезно видеть, что система мониторинга жива
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -1,0 +1,96 @@
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.5.2
+    container_name: es01
+    environment:
+      - node.name=es01
+      - cluster.name=lab5-cluster
+      # Один узел, без поиска других узлов кластера
+      - discovery.type=single-node
+      # Только для локальной лабы: без логина и TLS. В проде так нельзя.
+      - xpack.security.enabled=false
+      # Heap: Xms = Xmx, не больше 50% RAM контейнера
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    mem_limit: 2g
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.5.2
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+  # ---------- Мониторинг (часть 4) ----------
+
+  # Переводит JSON-статистику ES (_cluster/health, _nodes/stats, ...) в формат Prometheus
+  es-exporter:
+    image: quay.io/prometheuscommunity/elasticsearch-exporter:v1.11.0
+    container_name: es-exporter
+    command:
+      - --es.uri=http://elasticsearch:9200
+      - --es.all              # метрики со всех узлов, а не только с того, к которому подключились
+      - --es.indices          # метрики по каждому индексу (документы, размер)
+      - --collector.ilm       # статус ILM и состояние управляемых индексов
+    ports:
+      - "9114:9114"
+    depends_on:
+      elasticsearch:
+        # service_started, а не service_healthy: мониторинг обязан работать
+        # именно тогда, когда кластер нездоров (red)
+        condition: service_started
+    restart: unless-stopped
+
+  # Собирает метрики с exporter'а каждые 15 с и хранит их как временные ряды
+  prometheus:
+    image: prom/prometheus:v3.13.4
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    ports:
+      - "9090:9090"
+    depends_on:
+      - es-exporter
+    restart: unless-stopped
+
+  # Дашборды поверх Prometheus
+  grafana:
+    image: grafana/grafana:13.2.4
+    container_name: grafana
+    environment:
+      # Только для лабы: фиксированный пароль. В проде — секрет, не в compose-файле.
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  esdata:
+  promdata:
+  grafanadata:
