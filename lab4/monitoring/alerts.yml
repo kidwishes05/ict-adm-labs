@@ -1,0 +1,39 @@
+groups:
+  - name: lab4-postgresql
+
+    rules:
+      - alert: DatabaseOrExporterUnavailable
+        expr: (lab4_pg_up == 0) or (up{job="postgres"} == 0)
+        for: 15s
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: 'Database or exporter unavailable on {{ $labels.node }}'
+          description: 'No successful database observation for 15 seconds.'
+
+      - alert: PrimaryWithoutStreamingReplica
+        expr: |
+          (lab4_pg_streaming_replicas == 0)
+          and on (instance, job, node)
+          (lab4_pg_is_primary == 1)
+        for: 15s
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: 'Primary {{ $labels.node }} has no streaming standby'
+          description: 'Writes have no connected streaming replica.'
+
+      - alert: ReplicaReplayLagHigh
+        expr: lab4_pg_replication_lag_bytes > 262144
+        for: 15s
+
+        labels:
+          severity: warning
+
+        annotations:
+          summary: 'Replay lag exceeds 256 KiB on {{ $labels.node }}'
+          description: 'Standby {{ $labels.standby }} is behind.'

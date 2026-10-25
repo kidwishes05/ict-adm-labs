@@ -1,0 +1,72 @@
+stages:
+  - check
+  - build
+
+syntax:
+  stage: check
+
+  tags:
+    - static
+
+  image: python:3.12-slim
+
+  script:
+    - cd lab6
+    - python -m compileall -q ../lab4/app tests
+    - sleep 45
+
+unit-tests:
+  stage: check
+
+  tags:
+    - dynamic
+
+  image: python:3.12-slim
+
+  parallel: 3
+
+  script:
+    - cd lab6
+    - pip install --no-cache-dir -r ../lab4/app/requirements.txt
+    - PYTHONPATH=../lab4/app python -m unittest discover -s tests -v
+    - sleep 45
+
+build-image:
+  stage: build
+
+  tags:
+    - static
+
+  image: docker:27.5.1-cli
+
+  services:
+    - name: docker:27.5.1-dind
+      alias: docker
+
+      command:
+        - --tls=false
+
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+    HEALTHCHECK_TCP_PORT: "2375"
+
+  before_script:
+    - cd lab6
+
+    - |
+      for attempt in $(seq 1 60); do
+        docker info >/dev/null 2>&1 && break
+        sleep 2
+      done
+
+      docker info
+
+    - echo "$CI_REGISTRY_PASSWORD" | docker login "$CI_REGISTRY" -u "$CI_REGISTRY_USER" --password-stdin
+
+  script:
+    - docker build -t "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA" ../lab4/app
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA"
+
+  after_script:
+    - docker logout "$CI_REGISTRY"

@@ -1,0 +1,63 @@
+services:
+
+  service:
+    build:
+      context: ./service
+
+    ports:
+      - "8000:8000"
+
+
+  prometheus:
+    image: prom/prometheus:latest
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
+    depends_on:
+      - service
+
+  grafana:
+    image: grafana/grafana:latest
+
+    ports:
+      - "3000:3000"
+
+    depends_on:
+      - prometheus
+
+  loki:
+    image: grafana/loki:3.7.0
+
+    ports:
+      - "3100:3100"
+
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+
+
+  alloy:
+    image: grafana/alloy:latest
+
+    ports:
+      - "12345:12345"
+
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+
+    depends_on:
+      - loki
+      - service

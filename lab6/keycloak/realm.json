@@ -1,0 +1,87 @@
+{
+  "realm": "lab6",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+
+  "clients": [
+    {
+      "clientId": "gitlab",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+
+      "secret": "${GITLAB_OIDC_SECRET}",
+
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+
+      "redirectUris": [
+        "https://gitlab.lab.test/users/auth/openid_connect/callback"
+      ],
+
+      "webOrigins": [
+        "https://gitlab.lab.test"
+      ],
+
+      "defaultClientScopes": [
+        "profile",
+        "email"
+      ],
+
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    },
+
+    {
+      "clientId": "grafana",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+
+      "secret": "${GRAFANA_OIDC_SECRET}",
+
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+
+      "redirectUris": [
+        "https://grafana.lab.test/login/generic_oauth"
+      ],
+
+      "webOrigins": [
+        "https://grafana.lab.test"
+      ],
+
+      "defaultClientScopes": [
+        "profile",
+        "email"
+      ],
+
+      "attributes": {
+        "pkce.code.challenge.method": "S256"
+      }
+    }
+  ],
+
+  "users": [
+    {
+      "username": "student",
+      "enabled": true,
+      "emailVerified": true,
+
+      "email": "student@lab.test",
+      "firstName": "Lab",
+      "lastName": "Student",
+
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${TEST_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}

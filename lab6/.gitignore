@@ -1,0 +1,11 @@
+.env
+certs/
+
+runners/static/config.toml
+runners/static/template.toml
+runners/static/.runner_system_id
+
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
