@@ -598,14 +598,20 @@ PUT _cluster/settings
 
 | Файл | Что показывает |
 |---|---|
-| `screenshots/01-cluster-health.png` | `GET _cluster/health`: yellow с `test-index` / green |
-| `screenshots/02-mapping-count.png` | индекс `app-logs`: green, 50 документов |
-| `screenshots/03-search-trace-id.png` | поиск по `trace_id 47294739614ff3d7`, 6 записей |
-| `screenshots/04-aggregation.png` | агрегации `by_level` и `errors_by_service` |
+| `screenshots/01-cluster-health.png` | `GET _cluster/health`: green, 52/52 шарда, `unassigned_shards: 0` |
+| `screenshots/02-mapping-count.png` | `_cat/indices/app-logs`: green, 50 документов |
+| `screenshots/02b-count-50.png` | `GET app-logs/_count` → 50 |
+| `screenshots/03-search-trace-id.png` | поиск по `trace_id 47294739614ff3d7`: `hits.total` = 6 |
+| `screenshots/03b-search-trace-id-errors.png` | тот же поиск: цепочка ERROR payment → checkout → api-gateway |
+| `screenshots/04-aggregation.png` | агрегация `by_level` |
+| `screenshots/04b-aggregation-errors-by-service.png` | агрегация `errors_by_service` |
 | `screenshots/05-kibana-visualization.png` | Lens: столбцы по `level` |
 | `screenshots/06-ilm-explain-error.png` | инцидент 1: ILM ERROR |
-| `screenshots/07-indices-after-rollover.png` | `app-logs-000001` + `app-logs-000002`, alias переключён |
-| `screenshots/08-ilm-delete.png` | `000001` удалён фазой delete |
+| `screenshots/06b-index-instead-of-alias.png` | инцидент 1: индекс `app-logs-write` вместо alias'а |
+| `screenshots/07-indices-after-rollover.png` | `app-logs-000001` + `app-logs-000002` |
+| `screenshots/07b-aliases-after-rollover.png` | alias переключён: `is_write_index` false / true |
+| `screenshots/07c-ilm-explain-ok.png` | `_ilm/explain` после исправления, без ошибок |
+| `screenshots/08-ilm-delete.png` | `_cat/shards`: `app-logs-000001` удалён фазой delete, `000002` остался |
 | `screenshots/09-grafana-dashboard.png` | дашборд целиком |
 | `screenshots/10-graph-heap.png` | график 1: JVM heap |
 | `screenshots/11-graph-indexing.png` | график 2: скорость индексации |
