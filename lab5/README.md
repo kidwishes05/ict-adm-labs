@@ -1,5 +1,7 @@
 # Лабораторная 5 — ELK: Elasticsearch, Kibana, ILM и мониторинг
-
+```
+by Artem P
+```
 **Сценарий:** централизованные логи приложения. Single-node Elasticsearch + Kibana в Docker, 50 тестовых логов, поиск и агрегации, визуализация в Kibana, автоматическая ротация (ILM + rollover + alias) и мониторинг кластера через `elasticsearch_exporter` → Prometheus → Grafana.
 
 **Версии:** Elasticsearch / Kibana 9.5.2, elasticsearch-exporter 1.11.0, Prometheus 3.13.4 (LTS), Grafana 13.2.4.
