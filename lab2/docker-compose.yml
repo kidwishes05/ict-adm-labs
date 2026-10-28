@@ -7,6 +7,13 @@ services:
     ports:
       - "8000:8000"
 
+    environment:
+      OTEL_SERVICE_NAME: lab2-service
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+
+    depends_on:
+      - jaeger
+
 
   prometheus:
     image: prom/prometheus:latest
@@ -16,9 +23,11 @@ services:
 
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
 
     depends_on:
       - service
+      - alertmanager
 
   grafana:
     image: grafana/grafana:latest
@@ -61,3 +70,31 @@ services:
     depends_on:
       - loki
       - service
+
+  
+  jaeger:
+    image: jaegertracing/all-in-one:1.76.0
+
+    ports:
+      - "16686:16686"
+
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.34.1
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    depends_on:
+      - alert-webhook
+
+  alert-webhook:
+    image: mendhak/http-https-echo:42
+    environment:
+      HTTP_PORT: "8080"
