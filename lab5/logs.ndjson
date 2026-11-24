@@ -1,0 +1,50 @@
+{"timestamp": "2026-10-19T09:14:47.689Z", "level": "WARN", "service": "payment", "message": "Payment provider latency high: 616ms", "trace_id": "6c006f6123e2fcb4"}
+{"timestamp": "2026-10-19T09:15:58.593Z", "level": "INFO", "service": "auth", "message": "User user_8811 logged in successfully", "trace_id": "d9f195d014822f53"}
+{"timestamp": "2026-10-19T09:16:00.168Z", "level": "WARN", "service": "auth", "message": "Token close to expiration for user_8454", "trace_id": "27a0c3d77c967f79"}
+{"timestamp": "2026-10-19T09:18:33.691Z", "level": "INFO", "service": "auth", "message": "User user_5033 logged in successfully", "trace_id": "956b8c0ca8499b92"}
+{"timestamp": "2026-10-19T09:31:29.898Z", "level": "ERROR", "service": "checkout", "message": "Database deadlock while saving order ord_88193", "trace_id": "82ec9f2dfbf6e16f"}
+{"timestamp": "2026-10-19T09:34:01.737Z", "level": "WARN", "service": "checkout", "message": "Cart contains item with stale price, recalculating", "trace_id": "6ba25efe311c6eb6"}
+{"timestamp": "2026-10-19T09:47:31.630Z", "level": "ERROR", "service": "notification", "message": "Failed to send email to user_5700: SMTP 550 mailbox unavailable", "trace_id": "77097749527eecfa"}
+{"timestamp": "2026-10-19T09:52:44.408Z", "level": "INFO", "service": "auth", "message": "Access token refreshed for user_5573", "trace_id": "89456f27d7fa2d8d"}
+{"timestamp": "2026-10-19T09:58:21.523Z", "level": "INFO", "service": "payment", "message": "Refund processed for order ord_97012", "trace_id": "c04a96c4f3b63fe1"}
+{"timestamp": "2026-10-19T09:58:30.552Z", "level": "WARN", "service": "checkout", "message": "Discount code expired for order ord_63354", "trace_id": "6c6fa6115ab33edf"}
+{"timestamp": "2026-10-19T10:01:20.825Z", "level": "INFO", "service": "auth", "message": "User user_5011 logged in successfully", "trace_id": "a1384ddce2d9de5d"}
+{"timestamp": "2026-10-19T10:07:45.273Z", "level": "WARN", "service": "notification", "message": "SMTP server slow to respond: 1005ms", "trace_id": "cb9bc326d20eac17"}
+{"timestamp": "2026-10-19T10:08:02.939Z", "level": "INFO", "service": "payment", "message": "Payment authorized for order ord_97500, amount 35308 RUB", "trace_id": "e4347d51c1581092"}
+{"timestamp": "2026-10-19T10:08:12.895Z", "level": "INFO", "service": "auth", "message": "User user_9856 logged in successfully", "trace_id": "7b3a4e3e7c52fa17"}
+{"timestamp": "2026-10-19T10:11:02.388Z", "level": "INFO", "service": "payment", "message": "Refund processed for order ord_59692", "trace_id": "7866076514f7ce8d"}
+{"timestamp": "2026-10-19T10:11:12.209Z", "level": "WARN", "service": "inventory", "message": "Warehouse sync took 2075ms", "trace_id": "ef8c485bc07a30f2"}
+{"timestamp": "2026-10-19T10:11:31.165Z", "level": "INFO", "service": "auth", "message": "Access token refreshed for user_1158", "trace_id": "5e84f058d5a804eb"}
+{"timestamp": "2026-10-19T10:15:06.265Z", "level": "INFO", "service": "api-gateway", "message": "GET /api/v1/products 200 in 1263ms", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:15:06.310Z", "level": "INFO", "service": "auth", "message": "User user_1434 logged in successfully", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:15:06.754Z", "level": "INFO", "service": "checkout", "message": "Cart validated for order ord_30926", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:15:06.928Z", "level": "INFO", "service": "inventory", "message": "Stock reserved for sku_967, qty 3", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:15:07.561Z", "level": "INFO", "service": "payment", "message": "Refund processed for order ord_59615", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:15:08.425Z", "level": "INFO", "service": "notification", "message": "Push notification delivered to user_4733", "trace_id": "bdd640fb06671ad1"}
+{"timestamp": "2026-10-19T10:18:01.240Z", "level": "INFO", "service": "payment", "message": "Refund processed for order ord_20561", "trace_id": "b4d7e28e271e3ee2"}
+{"timestamp": "2026-10-19T10:23:58.260Z", "level": "INFO", "service": "api-gateway", "message": "GET /api/v1/products 200 in 2093ms", "trace_id": "ce88cb2dd4e80839"}
+{"timestamp": "2026-10-19T10:23:58.406Z", "level": "INFO", "service": "auth", "message": "Access token refreshed for user_9645", "trace_id": "ce88cb2dd4e80839"}
+{"timestamp": "2026-10-19T10:23:59.194Z", "level": "INFO", "service": "checkout", "message": "Cart validated for order ord_67422", "trace_id": "ce88cb2dd4e80839"}
+{"timestamp": "2026-10-19T10:23:59.462Z", "level": "INFO", "service": "payment", "message": "Payment authorized for order ord_87128, amount 14932 RUB", "trace_id": "ce88cb2dd4e80839"}
+{"timestamp": "2026-10-19T10:24:00.201Z", "level": "INFO", "service": "notification", "message": "Email sent to user_1514: order confirmation", "trace_id": "ce88cb2dd4e80839"}
+{"timestamp": "2026-10-19T10:33:37.208Z", "level": "WARN", "service": "checkout", "message": "Cart contains item with stale price, recalculating", "trace_id": "c56811cd5563f616"}
+{"timestamp": "2026-10-19T10:36:03.305Z", "level": "WARN", "service": "payment", "message": "Retrying payment request for order ord_45774 (attempt 2)", "trace_id": "addc3e13ab3b4d37"}
+{"timestamp": "2026-10-19T10:44:51.506Z", "level": "INFO", "service": "inventory", "message": "Stock level synced for warehouse SPB-1", "trace_id": "8498e113b227462c"}
+{"timestamp": "2026-10-19T10:50:58.997Z", "level": "ERROR", "service": "inventory", "message": "Out of stock for sku_283, reservation failed", "trace_id": "cd5f4822696608aa"}
+{"timestamp": "2026-10-19T10:51:18.338Z", "level": "INFO", "service": "auth", "message": "Access token refreshed for user_7883", "trace_id": "9360715fc3fe0183"}
+{"timestamp": "2026-10-19T10:57:21.130Z", "level": "WARN", "service": "inventory", "message": "Low stock for sku_798: 2 items left", "trace_id": "c7b5b2bc5a8aaeca"}
+{"timestamp": "2026-10-19T11:03:48.665Z", "level": "INFO", "service": "api-gateway", "message": "POST /api/v1/orders 201 in 1452ms", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:03:49.303Z", "level": "INFO", "service": "auth", "message": "User user_8573 logged in successfully", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:03:49.542Z", "level": "INFO", "service": "checkout", "message": "Order ord_51347 created, total 26790 RUB", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:03:49.773Z", "level": "ERROR", "service": "payment", "message": "Card tokenization failed: provider returned 500", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:03:50.059Z", "level": "ERROR", "service": "checkout", "message": "Failed to create order ord_86484: payment service unavailable", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:03:50.215Z", "level": "ERROR", "service": "api-gateway", "message": "Request timeout after 30000ms on /api/v1/orders", "trace_id": "47294739614ff3d7"}
+{"timestamp": "2026-10-19T11:07:37.941Z", "level": "ERROR", "service": "payment", "message": "Payment declined for order ord_87580: insufficient funds", "trace_id": "22bd33886db99102"}
+{"timestamp": "2026-10-19T11:17:50.436Z", "level": "WARN", "service": "payment", "message": "Retrying payment request for order ord_42406 (attempt 2)", "trace_id": "464c04af3d3f3799"}
+{"timestamp": "2026-10-19T11:37:26.194Z", "level": "INFO", "service": "api-gateway", "message": "POST /api/v1/orders 201 in 483ms", "trace_id": "aa0b7b14f2e9702d"}
+{"timestamp": "2026-10-19T11:42:43.494Z", "level": "INFO", "service": "api-gateway", "message": "GET /api/v1/cart 200 in 2179ms", "trace_id": "61b1cd2262801c45"}
+{"timestamp": "2026-10-19T11:42:44.296Z", "level": "INFO", "service": "auth", "message": "Access token refreshed for user_3591", "trace_id": "61b1cd2262801c45"}
+{"timestamp": "2026-10-19T11:42:44.823Z", "level": "ERROR", "service": "checkout", "message": "Failed to create order ord_93748: payment service unavailable", "trace_id": "61b1cd2262801c45"}
+{"timestamp": "2026-10-19T11:42:44.994Z", "level": "ERROR", "service": "inventory", "message": "Failed to connect to warehouse API: connection reset", "trace_id": "61b1cd2262801c45"}
+{"timestamp": "2026-10-19T11:47:01.826Z", "level": "WARN", "service": "inventory", "message": "Low stock for sku_218: 1 items left", "trace_id": "45b89cd927cb6f2a"}
+{"timestamp": "2026-10-19T11:49:37.576Z", "level": "INFO", "service": "api-gateway", "message": "GET /api/v1/products 200 in 720ms", "trace_id": "702cdd20286218b8"}
