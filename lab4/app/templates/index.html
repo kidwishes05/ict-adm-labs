@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lab 4 · PostgreSQL</title>
+
+  <style>
+    body {
+      font: 16px system-ui, sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f3f5fa;
+      color: #172235;
+    }
+
+    section {
+      background: white;
+      border: 1px solid #d9deea;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+
+    button, input {
+      font: inherit;
+      padding: 10px;
+      border: 1px solid #a6b2c5;
+      border-radius: 6px;
+      margin: 4px;
+    }
+
+    button {
+      cursor: pointer;
+      background: #124abe;
+      color: white;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      font-size: 14px;
+    }
+
+    li {
+      margin: 10px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .error {
+      color: #ac172e;
+    }
+
+    .muted {
+      color: #56647b;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Заметки · репликация PostgreSQL</h1>
+
+  <p>
+    Запись: <b>{{ write_host }}</b>
+    ·
+    чтение: <b>{{ read_host }}</b>
+  </p>
+
+  <section>
+    <input
+      id="body"
+      placeholder="Текст заметки"
+      maxlength="2000"
+    >
+
+    <button id="create">Создать запись</button>
+    <button id="load">Залить нагрузку: 1000 записей</button>
+
+    <p class="muted">
+      Результат последней записи — ответ основного узла.
+      Список ниже читается отдельно.
+    </p>
+
+    <pre id="write-result">Записей ещё не создавали.</pre>
+  </section>
+
+  <section>
+    <button id="refresh">Обновить список</button>
+
+    <label>
+      <input id="auto" type="checkbox" checked>
+      Обновлять каждые 2 секунды
+    </label>
+
+    <h2>Записи</h2>
+
+    <p id="read-state"></p>
+    <p id="read-error" class="error"></p>
+
+    <p class="muted">
+      Показаны последние 100 записей.
+      Общее количество учитывает всю таблицу.
+    </p>
+
+    <ul id="records"></ul>
+  </section>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    let reading = false;
+
+    async function refresh() {
+      if (reading) return;
+      reading = true;
+
+      try {
+        const response = await fetch(
+          "/api/notes",
+          { cache: "no-store" }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || response.statusText);
+        }
+
+        $("read-error").textContent = "";
+
+        $("read-state").textContent =
+          `Узел: ${data.node}; ` +
+          `роль: ${data.is_standby ? "standby" : "primary"}; ` +
+          `всего: ${data.total}; ` +
+          `max(id): ${data.max_id ?? "—"}; ` +
+          `обновлено: ${new Date().toLocaleTimeString()}`;
+
+        $("records").replaceChildren(
+          ...data.notes.map(note => {
+            const li = document.createElement("li");
+
+            li.textContent =
+              `#${note.id} · ${note.created_at} · ` +
+              note.body.slice(0, 180);
+
+            return li;
+          })
+        );
+      } catch (error) {
+        $("read-error").textContent =
+          "Обновление не удалось: " +
+          error.message +
+          ". Ниже могут оставаться ранее полученные данные.";
+      } finally {
+        reading = false;
+      }
+    }
+
+    async function write(path, payload) {
+      $("create").disabled = true;
+      $("load").disabled = true;
+
+      $("write-result").textContent = "Запись выполняется…";
+
+      try {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json();
+
+        $("write-result").textContent =
+          `HTTP ${response.status}\n` +
+          JSON.stringify(data, null, 2);
+      } catch (error) {
+        $("write-result").textContent =
+          "Ошибка: " + error.message;
+      } finally {
+        $("create").disabled = false;
+        $("load").disabled = false;
+
+        await refresh();
+      }
+    }
+
+    $("create").onclick = () => write(
+      "/api/notes",
+      {
+        body:
+          $("body").value ||
+          "Заметка " + new Date().toISOString()
+      }
+    );
+
+    $("load").onclick = () => write(
+      "/api/load",
+      { count: 1000 }
+    );
+
+    $("refresh").onclick = refresh;
+
+    setInterval(() => {
+      if ($("auto").checked) {
+        refresh();
+      }
+    }, 2000);
+
+    refresh();
+  </script>
+</body>
+</html>

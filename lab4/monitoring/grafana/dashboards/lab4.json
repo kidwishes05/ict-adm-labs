@@ -1,0 +1,196 @@
+{
+  "uid": "lab4-postgres",
+  "title": "Lab 4 — PostgreSQL replication",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "tags": ["lab4", "postgresql"],
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Доступность БД: 1 = SQL-запросы успешны",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab4_pg_up",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "Роль: 1 = primary, 0 = standby",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab4_pg_is_primary",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "Отставание применения WAL",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab4_pg_replication_lag_bytes",
+          "legendFormat": "{{node}} → {{standby}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "min": 0,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "Подключённые streaming-реплики",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab4_pg_streaming_replicas",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "Использование подключений, %",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * lab4_pg_connections / lab4_pg_max_connections",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "Пауза применения WAL: 1 = paused",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 16, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab4_pg_replay_paused",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "Доступность exporter",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 0, "y": 24, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"postgres\"}",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "max": 1,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "Активные оповещения",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"x": 12, "y": 24, "w": 12, "h": 8},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "legendFormat": "{{alertname}} {{node}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "min": 0,
+          "custom": {"spanNulls": false}
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

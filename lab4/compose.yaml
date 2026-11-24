@@ -1,0 +1,131 @@
+name: ${COMPOSE_PROJECT_NAME:-lab4-postgresql}
+
+x-db-common: &db-common
+  build: ./db
+  restart: "no"
+
+  healthcheck:
+    test:
+      - CMD-SHELL
+      - pg_isready -h 127.0.0.1 -U postgres -d lab4
+    interval: 3s
+    timeout: 3s
+    retries: 30
+    start_period: 20s
+
+services:
+  primary:
+    <<: *db-common
+
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: postgres
+      POSTGRES_DB: lab4
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?copy .env.example to .env}
+      APP_PASSWORD: ${APP_PASSWORD:?required}
+      REPL_PASSWORD: ${REPL_PASSWORD:?required}
+      MONITOR_PASSWORD: ${MONITOR_PASSWORD:?required}
+
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+
+    volumes:
+      - primary-data:/var/lib/postgresql/data
+
+  replica:
+    <<: *db-common
+
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      REPL_PASSWORD: ${REPL_PASSWORD:?required}
+
+    entrypoint:
+      - bash
+      - /scripts/replica-entrypoint.sh
+
+    depends_on:
+      primary:
+        condition: service_healthy
+
+    volumes:
+      - replica-data:/var/lib/postgresql/data
+
+  app:
+    build: ./app
+
+    environment:
+      WRITE_HOST: ${WRITE_HOST:-primary}
+      READ_HOST: ${READ_HOST:-replica}
+      DB_NAME: lab4
+      DB_USER: app_user
+      DB_PASSWORD: ${APP_PASSWORD:?required}
+
+    ports:
+      - "127.0.0.1:8004:8000"
+
+    depends_on:
+      primary:
+        condition: service_healthy
+      replica:
+        condition: service_healthy
+
+  exporter-primary:
+    build: ./app
+
+    command:
+      - python
+      - exporter.py
+
+    environment:
+      DB_HOST: primary
+      DB_NAME: lab4
+      DB_USER: monitor
+      DB_PASSWORD: ${MONITOR_PASSWORD:?required}
+
+  exporter-replica:
+    build: ./app
+
+    command:
+      - python
+      - exporter.py
+
+    environment:
+      DB_HOST: replica
+      DB_NAME: lab4
+      DB_USER: monitor
+      DB_PASSWORD: ${MONITOR_PASSWORD:?required}
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+
+    ports:
+      - "127.0.0.1:9094:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.1.1
+
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+    ports:
+      - "127.0.0.1:3004:3000"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+volumes:
+  primary-data:
+  replica-data:
+  prometheus-data:
+  grafana-data:
