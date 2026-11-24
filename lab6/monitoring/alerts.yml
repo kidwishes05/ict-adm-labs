@@ -1,0 +1,44 @@
+groups:
+  - name: lab6-nginx
+
+    rules:
+      - alert: NginxOrExporterUnavailable
+
+        expr: |
+          (nginx_up == 0)
+          or
+          (up{job="nginx"} == 0)
+
+        for: 15s
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: Nginx or exporter is unavailable
+
+      - alert: NginxActiveConnectionsHigh
+
+        expr: nginx_connections_active > 100
+
+        for: 30s
+
+        labels:
+          severity: warning
+
+        annotations:
+          summary: More than 100 active connections
+
+      - alert: NginxDroppedConnections
+
+        expr: |
+          increase(nginx_connections_accepted[1m])
+          - increase(nginx_connections_handled[1m]) > 0
+
+        for: 15s
+
+        labels:
+          severity: critical
+
+        annotations:
+          summary: Nginx is dropping connections

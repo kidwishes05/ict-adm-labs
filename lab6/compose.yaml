@@ -1,0 +1,153 @@
+name: ${COMPOSE_PROJECT_NAME:-lab6-gitlab}
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:18.3.1-ce.0
+    hostname: gitlab-core
+    shm_size: "256m"
+
+    environment:
+      GITLAB_ROOT_PASSWORD: ${GITLAB_ROOT_PASSWORD:?required}
+      GITLAB_OIDC_SECRET: ${GITLAB_OIDC_SECRET:?required}
+
+      GITLAB_OMNIBUS_CONFIG: |
+        from_file('/etc/gitlab/lab6.rb')
+
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+      - ./gitlab/gitlab.rb:/etc/gitlab/lab6.rb:ro
+      - ./certs/gitlab-trusted:/etc/gitlab/trusted-certs
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3.3
+
+    command:
+      - start-dev
+      - --import-realm
+
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?required}
+
+      KC_HOSTNAME: https://sso.lab.test
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+
+      GITLAB_OIDC_SECRET: ${GITLAB_OIDC_SECRET:?required}
+      GRAFANA_OIDC_SECRET: ${GRAFANA_OIDC_SECRET:?required}
+      TEST_USER_PASSWORD: ${TEST_USER_PASSWORD:?required}
+
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+      - ./keycloak/realm.json:/opt/keycloak/data/import/lab6-realm.json:ro
+
+  nginx:
+    image: nginx:1.28.0
+
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/proxy.conf:/etc/nginx/proxy.conf:ro
+      - ./nginx/admin-allow.conf:/etc/nginx/admin-allow.conf:ro
+      - ./certs/server.crt:/etc/nginx/certs/server.crt:ro
+      - ./certs/server.key:/etc/nginx/certs/server.key:ro
+
+    depends_on:
+      - gitlab
+      - keycloak
+      - grafana
+
+    networks:
+      default:
+        ipv4_address: 172.30.6.10
+
+        aliases:
+          - gitlab.lab.test
+          - registry.lab.test
+          - sso.lab.test
+          - grafana.lab.test
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+
+    command:
+      - --nginx.scrape-uri=http://nginx:8080/stub_status
+
+  prometheus:
+    image: prom/prometheus:v3.5.0
+
+    ports:
+      - "127.0.0.1:9096:9090"
+
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+
+  grafana:
+    image: grafana/grafana:12.1.1
+
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?required}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+      GF_SERVER_ROOT_URL: https://grafana.lab.test
+
+      GF_AUTH_GENERIC_OAUTH_ENABLED: "true"
+      GF_AUTH_GENERIC_OAUTH_NAME: Keycloak
+      GF_AUTH_GENERIC_OAUTH_ALLOW_SIGN_UP: "true"
+
+      GF_AUTH_GENERIC_OAUTH_CLIENT_ID: grafana
+      GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ${GRAFANA_OIDC_SECRET:?required}
+
+      GF_AUTH_GENERIC_OAUTH_SCOPES: openid profile email
+
+      GF_AUTH_GENERIC_OAUTH_AUTH_URL: https://sso.lab.test/realms/lab6/protocol/openid-connect/auth
+      GF_AUTH_GENERIC_OAUTH_TOKEN_URL: https://sso.lab.test/realms/lab6/protocol/openid-connect/token
+      GF_AUTH_GENERIC_OAUTH_API_URL: https://sso.lab.test/realms/lab6/protocol/openid-connect/userinfo
+
+      GF_AUTH_GENERIC_OAUTH_USE_PKCE: "true"
+      GF_AUTH_GENERIC_OAUTH_TLS_CLIENT_CA: /etc/grafana/lab6-ca.crt
+      GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH: "'Viewer'"
+
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./certs/ca.crt:/etc/grafana/lab6-ca.crt:ro
+
+      - ../lab4/monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+
+  runner-static:
+    image: gitlab/gitlab-runner:v18.3.1
+
+    profiles:
+      - ci
+
+    volumes:
+      - ./runners/static:/etc/gitlab-runner
+      - ./certs/ca.crt:/etc/gitlab-runner/certs/gitlab.lab.test.crt:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  default:
+    name: lab6-net
+
+    ipam:
+      config:
+        - subnet: 172.30.6.0/24
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  keycloak-data:
+  prometheus-data:
+  grafana-data:

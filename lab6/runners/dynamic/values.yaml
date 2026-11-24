@@ -1,0 +1,39 @@
+gitlabUrl: https://gitlab.lab.test
+
+concurrent: 3
+checkInterval: 3
+
+certsSecretName: lab6-ca
+
+rbac:
+  create: true
+
+hostAliases:
+  - ip: "172.30.6.10"
+    hostnames:
+      - gitlab.lab.test
+
+runners:
+  secret: lab6-runner-token
+
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        namespace = "{{.Release.Namespace}}"
+
+        image = "python:3.12-slim"
+        privileged = false
+
+        poll_timeout = 300
+
+        cpu_request = "100m"
+        memory_request = "128Mi"
+        memory_limit = "512Mi"
+
+        [runners.kubernetes.node_selector]
+          "kubernetes.io/arch" = "arm64"
+          "kubernetes.io/os" = "linux"
+
+        [[runners.kubernetes.host_aliases]]
+          ip = "172.30.6.10"
+          hostnames = ["gitlab.lab.test"]
