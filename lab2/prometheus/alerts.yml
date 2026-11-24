@@ -1,0 +1,30 @@
+
+groups:
+  - name: lab2-alerts
+    rules:
+      - alert: HighErrorRate
+        expr: sum(rate(http_errors_total{endpoint="/error"}[1m])) > 0.05
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "More than 0.05 errors per second."
+
+      - alert: RequestSpike
+        expr: sum(rate(http_requests_total{endpoint="/work"}[1m])) > 0.3
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP request spike"
+          description: "More than 0.3 requests per second."
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{endpoint="/delay"}[1m]))) > 1
+        for: 0s
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 request latency"
+          description: "95th percentile exceeds 1 second."
