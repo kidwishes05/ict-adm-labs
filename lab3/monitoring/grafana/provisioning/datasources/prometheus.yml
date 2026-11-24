@@ -1,0 +1,12 @@
+# Источник данных Grafana — создаётся при старте из этого файла
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus              # на этот uid ссылаются панели дашборда
+    type: prometheus
+    access: proxy                # запросы идут от сервера Grafana, а не из браузера
+    url: http://prometheus:9090  # имя сервиса в docker-сети
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: 10s          # = scrape_interval Prometheus

@@ -1,0 +1,39 @@
+groups:
+  - name: kafka-orders
+    rules:
+      # 1. Заказы копятся, а собирать некому
+      - alert: PickersDownWithBacklog
+        expr: |
+          sum(kafka_consumergroup_lag_sum{consumergroup="pickers", topic="orders"}) > 0
+          and on()
+          (sum(kafka_consumergroup_members{consumergroup="pickers"}) or vector(0)) == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Заказы не собираются: в группе pickers нет ни одного сборщика"
+          description: "Сборщиков 0, ждут сборки {{ $value }} заказов. Проверить контейнеры picker-*: упали, crash-loop или не стартовали после деплоя."
+
+      # 2. Заказы перестали поступать (или пропали сами метрики)
+      - alert: OrdersStoppedArriving
+        expr: |
+          (sum(rate(kafka_topic_partition_current_offset{topic="orders"}[5m])) or vector(0)) == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "В топик orders 10 минут не пришло ни одного заказа"
+          description: "Продюсер молчит: проверить user-service и upstream. «or vector(0)» срабатывает и тогда, когда метрик нет вообще — проверить up{job=\"kafka\"} (kafka-exporter)."
+
+      # 3. Диск под логом Kafka заканчивается — сейчас или скоро
+      - alert: KafkaDiskFillingUp
+        expr: |
+          100 * node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 15
+          or
+          predict_linear(node_filesystem_avail_bytes{mountpoint="/"}[1h], 4 * 3600) < 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Диск с данными Kafka заканчивается"
+          description: "Свободно меньше 15% или при текущем темпе место кончится в ближайшие 4 часа. Варианты: расширить том, снизить retention.ms, проверить, кто пишет на диск."
