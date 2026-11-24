@@ -1,7 +1,4 @@
 # Lab 6 — GitLab, nginx, SSO и CI/CD
-```
-by Stephan M
-```
 
 В этой работе мы разворачиваем локальный GitLab и объединяем его с Keycloak, nginx и системой CI/CD. Настраиваем единый вход для GitLab и Grafana, ограничиваем доступ к отдельным маршрутам, подключаем статический и Kubernetes-based GitLab Runner, а также добавляем мониторинг nginx через Prometheus и Grafana.
 
